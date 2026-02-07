@@ -35,7 +35,7 @@ Specifically tested and optimized for **Ambrosia artemisiifolia** (ragweed) with
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/teprof2.git
+git clone https://github.com/lilim9527/TEProf2-for-ragweed.git
 cd teprof2
 
 # Create virtual environment
@@ -292,25 +292,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you use TEProf2 in your research, please cite:
 
-```bibtex
-@article{teprof2_2024,
-  title={TEProf2: Modern TE Promoter Finder for RNA-seq Analysis},
-  author={Your Name},
-  journal={Bioinformatics},
-  year={2024},
-  doi={10.1038/s41588-023-01349-3}
-}
-```
-
-Original TEProf publication:
+Original TEProf2 publication:
 https://doi.org/10.1038/s41588-023-01349-3
 
 ## 🙋 Support
 
 - **Documentation**: See `docs/` directory
 - **Examples**: See `examples/` directory
-- **Issues**: [GitHub Issues](https://github.com/yourusername/teprof2/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/teprof2/discussions)
+- **Issues**: [GitHub Issues](https://github.com/lilim9527/TEProf2-for-ragweed/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/lilim9527/TEProf2-for-ragweed/discussions)
 
 ## 🗺️ Roadmap
 
@@ -330,7 +320,4 @@ https://doi.org/10.1038/s41588-023-01349-3
 - Original TEProf authors
 - Contributors to pysam, pandas, and intervaltree
 - The bioinformatics community
-
----
-
-**TEProf2 v2.0** - Making TE analysis fast, robust, and accessible for all organisms.
+- Claude Code v4.5

@@ -199,17 +199,36 @@ class TEAnnotator:
         """
         Load Gencode gene dictionaries.
 
-        Note: In the refactored version, we should convert pickle files
-        to a more modern format (parquet, JSON, or HDF5).
+        These dictionaries contain gene/transcript interval information
+        for quick lookup during annotation.
         """
         logger.info("Loading Gencode dictionaries")
 
-        # For now, we'll use a placeholder
-        # In production, implement proper loading from pickle or convert to modern format
-        logger.warning(
-            "Gencode dictionary loading not fully implemented - "
-            "convert pickle files to modern format"
-        )
+        # Initialize empty dictionaries
+        self.gencode_plus = {}
+        self.gencode_minus = {}
+
+        # Load plus strand dictionary
+        if self.config.gencode_plus_dict:
+            try:
+                import pickle
+                with open(self.config.gencode_plus_dict, 'rb') as f:
+                    self.gencode_plus = pickle.load(f)
+                logger.info(f"Loaded Gencode + strand dictionary: {len(self.gencode_plus)} contigs")
+            except Exception as e:
+                logger.warning(f"Failed to load Gencode + strand dictionary: {e}")
+                self.gencode_plus = {}
+
+        # Load minus strand dictionary
+        if self.config.gencode_minus_dict:
+            try:
+                import pickle
+                with open(self.config.gencode_minus_dict, 'rb') as f:
+                    self.gencode_minus = pickle.load(f)
+                logger.info(f"Loaded Gencode - strand dictionary: {len(self.gencode_minus)} contigs")
+            except Exception as e:
+                logger.warning(f"Failed to load Gencode - strand dictionary: {e}")
+                self.gencode_minus = {}
 
     def _load_focus_genes(self) -> None:
         """Load focus gene list for filtering."""

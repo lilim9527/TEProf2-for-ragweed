@@ -83,9 +83,18 @@ def process_single_individual(
         QuantificationConfig,
     )
 
-    # 在并行模式下禁用详细日志
+    # 在并行模式下重新配置日志（避免RichHandler导致的死锁）
     if quiet:
-        logging.getLogger().setLevel(logging.ERROR)
+        # 移除所有现有的handler
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+
+        # 添加简单的StreamHandler
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.ERROR)
+        root_logger.addHandler(handler)
+        root_logger.setLevel(logging.ERROR)
 
     # 创建个体输出目录
     indiv_output = output_dir / individual_id

@@ -1,0 +1,180 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teprof2"
+version = "2.0.0"
+description = "Modern TE (Transposable Element) Promoter Finder for RNA-seq analysis"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "TEProf2 Development Team"},
+]
+keywords = [
+    "bioinformatics",
+    "transposable-elements",
+    "RNA-seq",
+    "genomics",
+    "transcriptomics",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+    # Core data processing
+    "pandas>=2.2.0",
+    "polars>=0.20.0",
+    "numpy>=1.26.0",
+    "scipy>=1.12.0",
+    "pyarrow>=15.0.0",
+
+    # Genomics libraries
+    "pysam>=0.22.0",
+    "pybedtools>=0.9.1",
+    "intervaltree>=3.1.0",
+
+    # Data validation
+    "pydantic>=2.6.0",
+
+    # CLI and UI
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    "tqdm>=4.66.0",
+
+    # Logging
+    "loguru>=0.7.2",
+
+    # Configuration
+    "pyyaml>=6.0",
+    "toml>=0.10.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-xdist>=3.5.0",
+
+    # Type checking
+    "mypy>=1.8.0",
+    "types-PyYAML",
+
+    # Linting and formatting
+    "ruff>=0.2.0",
+    "black>=24.0.0",
+
+    # Documentation
+    "sphinx>=7.2.0",
+    "sphinx-rtd-theme>=2.0.0",
+]
+
+performance = [
+    # Optional performance enhancements
+    "numba>=0.59.0",  # JIT compilation
+    "cython>=3.0.0",  # C extensions
+]
+
+[project.scripts]
+teprof2 = "teprof2.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/teprof2"
+Documentation = "https://teprof2.readthedocs.io"
+Repository = "https://github.com/yourusername/teprof2"
+"Bug Tracker" = "https://github.com/yourusername/teprof2/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+teprof2 = ["py.typed"]
+
+# Ruff configuration (fast linter/formatter)
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pysam.*",
+    "pybedtools.*",
+    "intervaltree.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=teprof2",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/teprof2"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

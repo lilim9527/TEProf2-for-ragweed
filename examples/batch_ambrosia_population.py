@@ -90,15 +90,20 @@ def process_single_individual(
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
 
-        # 添加简单的StreamHandler
+        # 添加简单的StreamHandler，只输出关键信息
         handler = logging.StreamHandler()
-        handler.setLevel(logging.ERROR)
+        handler.setLevel(logging.WARNING)  # 改为WARNING级别，可以看到警告和错误
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
         root_logger.addHandler(handler)
-        root_logger.setLevel(logging.ERROR)
+        root_logger.setLevel(logging.WARNING)
 
     # 创建个体输出目录
     indiv_output = output_dir / individual_id
     indiv_output.mkdir(parents=True, exist_ok=True)
+
+    # 即使在quiet模式下也输出开始信息
+    print(f"[{individual_id}] 开始处理...", flush=True)
 
     try:
         # =====================================================================
@@ -199,11 +204,17 @@ def process_single_individual(
         with open(summary_output, 'w') as f:
             json.dump(summary, f, indent=2)
 
+        # 即使在quiet模式下也输出完成信息
+        print(f"[{individual_id}] ✓ 完成！", flush=True)
+
         if not quiet:
             logger.info(f"[{individual_id}] ✓ 完成！")
         return summary
 
     except Exception as e:
+        # 即使在quiet模式下也输出错误信息
+        print(f"[{individual_id}] ✗ 错误: {e}", flush=True)
+
         if not quiet:
             logger.error(f"[{individual_id}] ✗ 错误: {e}")
         return {

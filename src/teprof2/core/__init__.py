@@ -1,5 +1,5 @@
 """Core data structures and utilities."""
 
-from teprof2.core.genome_interval import GenomeInterval
+from teprof2.core.genome_interval import GenomicInterval, GenomeIntervalHandler
 
-__all__ = ["GenomeInterval"]
+__all__ = ["GenomicInterval", "GenomeIntervalHandler"]

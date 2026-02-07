@@ -1,5 +1,5 @@
 """TE annotation functionality."""
 
-from teprof2.annotation.te_annotator import TEAnnotator
+from teprof2.annotation.te_annotator import TEAnnotator, AnnotationConfig
 
-__all__ = ["TEAnnotator"]
+__all__ = ["TEAnnotator", "AnnotationConfig"]

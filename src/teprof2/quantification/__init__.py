@@ -1,5 +1,5 @@
 """TE quantification functionality."""
 
-from teprof2.quantification.tpm_calculator import TPMCalculator
+from teprof2.quantification.tpm_calculator import ExpressionQuantifier, QuantificationConfig
 
-__all__ = ["TPMCalculator"]
+__all__ = ["ExpressionQuantifier", "QuantificationConfig"]

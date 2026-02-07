@@ -6,12 +6,15 @@ A modern Python package for analyzing transposable elements in genomic data.
 
 __version__ = "2.0.0"
 
-from teprof2.core.genome_interval import GenomeInterval
-from teprof2.annotation.te_annotator import TEAnnotator
-from teprof2.quantification.tpm_calculator import TPMCalculator
+from teprof2.core.genome_interval import GenomicInterval, GenomeIntervalHandler
+from teprof2.annotation.te_annotator import TEAnnotator, AnnotationConfig
+from teprof2.quantification.tpm_calculator import ExpressionQuantifier, QuantificationConfig
 
 __all__ = [
-    "GenomeInterval",
+    "GenomicInterval",
+    "GenomeIntervalHandler",
     "TEAnnotator",
-    "TPMCalculator",
+    "AnnotationConfig",
+    "ExpressionQuantifier",
+    "QuantificationConfig",
 ]

@@ -32,8 +32,8 @@ class AnnotationConfig:
     """Configuration for TE annotation."""
 
     rmsk_bed: Path  # RepeatMasker BED file (bgzipped + tabix)
-    gencode_plus_dict: Path  # Gencode dictionary for + strand
-    gencode_minus_dict: Path  # Gencode dictionary for - strand
+    gencode_plus_dict: Optional[Path] = None  # Gencode dictionary for + strand
+    gencode_minus_dict: Optional[Path] = None  # Gencode dictionary for - strand
     rmsk_annotation: Optional[Path] = None  # TE family/class mapping
     focus_genes: Optional[Path] = None  # Gene filter list
     plus_intron: Optional[Path] = None  # Intron annotations +
@@ -43,9 +43,14 @@ class AnnotationConfig:
     def __post_init__(self) -> None:
         """Validate that required files exist."""
         if self.validate_inputs:
-            for attr in ["rmsk_bed", "gencode_plus_dict", "gencode_minus_dict"]:
+            # Always validate rmsk_bed
+            if not self.rmsk_bed.exists():
+                raise FileNotFoundError(f"rmsk_bed not found: {self.rmsk_bed}")
+
+            # Validate optional files only if provided
+            for attr in ["gencode_plus_dict", "gencode_minus_dict"]:
                 path = getattr(self, attr)
-                if not path.exists():
+                if path is not None and not path.exists():
                     raise FileNotFoundError(f"{attr} not found: {path}")
 
 
@@ -154,12 +159,16 @@ class TEAnnotator:
                     for row in tbx.fetch(contig):
                         fields = row.split("\t")
                         if len(fields) < 6:
-                            logger.warning(f"Skipping malformed BED line: {row}")
                             continue
 
                         chrom = fields[0]
                         start = int(fields[1])
                         end = int(fields[2])
+
+                        # Skip zero-length intervals (start == end)
+                        if end <= start:
+                            continue
+
                         name = fields[3] if len(fields) > 3 else ""
                         score = float(fields[4]) if len(fields) > 4 else 0.0
                         strand = fields[5] if len(fields) > 5 else "."
@@ -173,7 +182,7 @@ class TEAnnotator:
                             score=score,
                         )
                 except Exception as e:
-                    logger.warning(f"Error loading contig {contig}: {e}")
+                    logger.debug(f"Error loading contig {contig}: {e}")
                     continue
 
             n_intervals = self.rmsk_handler.count_intervals()

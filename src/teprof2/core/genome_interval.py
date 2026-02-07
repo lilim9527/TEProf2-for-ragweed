@@ -136,6 +136,10 @@ class GenomeIntervalHandler:
         Raises:
             ValueError: If validation is enabled and interval is invalid
         """
+        # Normalize strand notation: 'C' (complement) -> '-'
+        if strand == 'C':
+            strand = '-'
+
         interval = GenomicInterval(
             chrom=chrom,
             start=start,

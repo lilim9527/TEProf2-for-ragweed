@@ -34,7 +34,7 @@ import pandas as pd
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 # 配置rich console
 console = Console()
@@ -58,6 +58,7 @@ def process_single_individual(
     gencode_minus: Optional[Path],
     output_dir: Path,
     min_mapq: int = 255,
+    quiet: bool = False,
 ) -> dict:
     """
     处理单个个体的数据
@@ -71,6 +72,7 @@ def process_single_individual(
         gencode_minus: Gencode字典（-链）
         output_dir: 输出目录
         min_mapq: 最小mapping quality
+        quiet: 是否禁用详细日志输出
 
     Returns:
         包含统计信息的字典
@@ -81,7 +83,9 @@ def process_single_individual(
         QuantificationConfig,
     )
 
-    logger.info(f"[{individual_id}] 开始处理...")
+    # 在并行模式下禁用详细日志
+    if quiet:
+        logging.getLogger().setLevel(logging.ERROR)
 
     # 创建个体输出目录
     indiv_output = output_dir / individual_id
@@ -91,7 +95,8 @@ def process_single_individual(
         # =====================================================================
         # Step 1: 注释转录本（使用种群水平的GTF）
         # =====================================================================
-        logger.info(f"[{individual_id}] Step 1/3: 注释转录本...")
+        if not quiet:
+            logger.info(f"[{individual_id}] Step 1/3: 注释转录本...")
 
         annotation_config = AnnotationConfig(
             rmsk_bed=rmsk_bed,
@@ -111,7 +116,8 @@ def process_single_individual(
         # =====================================================================
         # Step 2: 定量表达（使用个体水平的BAM）
         # =====================================================================
-        logger.info(f"[{individual_id}] Step 2/3: 定量表达...")
+        if not quiet:
+            logger.info(f"[{individual_id}] Step 2/3: 定量表达...")
 
         quant_config = QuantificationConfig(
             bam_file=bam_file,
@@ -144,7 +150,8 @@ def process_single_individual(
         # =====================================================================
         # Step 3: 合并注释和表达数据
         # =====================================================================
-        logger.info(f"[{individual_id}] Step 3/3: 合并数据...")
+        if not quiet:
+            logger.info(f"[{individual_id}] Step 3/3: 合并数据...")
 
         merged_df = annotation_df.merge(
             transcript_df,
@@ -183,11 +190,13 @@ def process_single_individual(
         with open(summary_output, 'w') as f:
             json.dump(summary, f, indent=2)
 
-        logger.info(f"[{individual_id}] ✓ 完成！")
+        if not quiet:
+            logger.info(f"[{individual_id}] ✓ 完成！")
         return summary
 
     except Exception as e:
-        logger.error(f"[{individual_id}] ✗ 错误: {e}")
+        if not quiet:
+            logger.error(f"[{individual_id}] ✗ 错误: {e}")
         return {
             'individual_id': individual_id,
             'status': 'failed',
@@ -197,7 +206,7 @@ def process_single_individual(
 
 @app.command()
 def main(
-    csv_file: Path = typer.Option(..., "--csv", help="CSV配置文件（格式：individual_id,group）"),
+    csv_file: Path = typer.Option(..., "--csv", help="CSV配置文件（格式：ID,Region,Group）"),
     target_group: str = typer.Option(..., "--target-group", help="目标组别"),
     bam_dir: Path = typer.Option(..., "--bam-dir", help="BAM文件目录"),
     gtf_file: Path = typer.Option(..., "--gtf-file", help="种群水平的GTF文件"),
@@ -208,18 +217,25 @@ def main(
     output_dir: Path = typer.Option("./results", "--output-dir", "-o", help="输出目录"),
     min_mapq: int = typer.Option(255, "--min-mapq", help="最小mapping quality"),
     workers: int = typer.Option(1, "--workers", "-j", help="并行worker数量"),
+    bam_suffix: str = typer.Option(".bam", "--bam-suffix", help="BAM文件后缀（例如：.bam 或 _Aligned.sortedByCoord.out.bam）"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="详细输出"),
 ) -> None:
     """
     批量处理豚草种群数据
 
+    CSV文件格式（三列，有表头）:
+        ID,Region,Group
+        SRR10992778_Aligned.sortedByCoord.out,NA,4
+        SRR10992779_Aligned.sortedByCoord.out,NA,4
+
     示例:
         python batch_ambrosia_population.py \\
             --csv gtf-to-bam.csv \\
-            --target-group 10 \\
+            --target-group 4 \\
             --bam-dir /path/to/bam_files \\
-            --gtf-file /path/to/population_10.gtf \\
+            --gtf-file /path/to/population_4.gtf \\
             --rmsk-bed /path/to/rmsk.bed.gz \\
+            --bam-suffix .bam \\
             --output-dir ./results \\
             --workers 12
     """
@@ -240,10 +256,16 @@ def main(
 
     individuals = []
     with open(csv_file, 'r') as f:
-        reader = csv.DictReader(f, fieldnames=['individual_id', 'group'])
+        reader = csv.DictReader(f)  # 使用DictReader自动读取表头
         for row in reader:
-            if row['group'].strip() == target_group:
-                individuals.append(row['individual_id'].strip())
+            # 跳过空行
+            if not row.get('ID') or not row.get('Group'):
+                continue
+
+            # 筛选目标组别
+            if row['Group'].strip() == target_group:
+                sample_id = row['ID'].strip()
+                individuals.append(sample_id)
 
     console.print(f"找到 {len(individuals)} 个属于组别 '{target_group}' 的个体")
 
@@ -268,16 +290,27 @@ def main(
     missing_bams = []
     valid_samples = []
 
-    for indiv_id in individuals:
-        bam_file = bam_dir / f"{indiv_id}.bam"
+    for sample_id in individuals:
+        # 根据sample_id构建BAM文件名
+        # 如果sample_id已经包含后缀（如_Aligned.sortedByCoord.out），则直接添加.bam
+        # 否则使用指定的bam_suffix
+        if sample_id.endswith(('.bam', '.out')):
+            # sample_id已经包含文件名，可能需要添加.bam
+            if sample_id.endswith('.bam'):
+                bam_file = bam_dir / sample_id
+            else:
+                bam_file = bam_dir / f"{sample_id}{bam_suffix}"
+        else:
+            bam_file = bam_dir / f"{sample_id}{bam_suffix}"
+
         bam_index = Path(str(bam_file) + ".bai")
 
         if not bam_file.exists():
-            missing_bams.append(f"{indiv_id}.bam")
+            missing_bams.append(f"{bam_file.name}")
         elif not bam_index.exists():
-            missing_bams.append(f"{indiv_id}.bam.bai (索引)")
+            missing_bams.append(f"{bam_file.name}.bai (索引)")
         else:
-            valid_samples.append((indiv_id, bam_file))
+            valid_samples.append((sample_id, bam_file))
 
     if missing_bams:
         console.print(f"[bold yellow]警告:[/bold yellow] 以下文件缺失:")
@@ -333,37 +366,46 @@ def main(
                     gencode_minus=gencode_minus,
                     output_dir=output_dir,
                     min_mapq=min_mapq,
+                    quiet=True,  # 并行模式下禁用详细日志
                 )
                 futures[future] = indiv_id
 
             # 收集结果
             with Progress(
                 SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
+                TextColumn("[bold blue]{task.description}"),
                 BarColumn(),
-                TaskProgressColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TextColumn("({task.completed}/{task.total})"),
                 console=console,
+                transient=False,
+                refresh_per_second=2,  # 降低刷新频率
             ) as progress:
                 task = progress.add_task(
-                    f"处理中...", total=len(futures)
+                    "处理样本", total=len(futures)
                 )
 
+                completed = 0
                 for future in as_completed(futures):
                     indiv_id = futures[future]
                     try:
                         summary = future.result()
                         results.append(summary)
+                        completed += 1
+
                         if summary['status'] == 'success':
-                            console.print(f"✓ {indiv_id} 完成")
+                            progress.console.print(f"[green]✓[/green] {indiv_id}")
                         else:
-                            console.print(f"✗ {indiv_id} 失败: {summary.get('error', 'Unknown error')}")
+                            progress.console.print(f"[red]✗[/red] {indiv_id}: {summary.get('error', 'Unknown error')}")
                     except Exception as e:
-                        console.print(f"✗ {indiv_id} 异常: {e}")
+                        completed += 1
+                        progress.console.print(f"[red]✗[/red] {indiv_id}: {e}")
                         results.append({
                             'individual_id': indiv_id,
                             'status': 'failed',
                             'error': str(e),
                         })
+
                     progress.update(task, advance=1)
 
     # =========================================================================
